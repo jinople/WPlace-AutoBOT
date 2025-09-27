@@ -106,11 +106,49 @@ class TokenManager {
   }
 
   /**
+   * Check if Cloudflare bypass is enabled
+   * @returns {Promise<boolean>} True if bypass is enabled
+   */
+  async isCloudflareBypassEnabled() {
+    try {
+      if (typeof chrome !== 'undefined' && chrome.storage) {
+        const result = await chrome.storage.local.get('bypassCloudflare');
+        return result.bypassCloudflare === true;
+      }
+      return false;
+    } catch (error) {
+      console.warn('Could not check Cloudflare bypass setting:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Generate a fallback token when Cloudflare is bypassed
+   * @returns {string} A mock token for bypass mode
+   */
+  generateBypassToken() {
+    // Generate a mock token that looks like a real Turnstile token
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
+    let token = '';
+    for (let i = 0; i < 500; i++) {
+      token += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    console.log('🚫 Cloudflare bypass enabled - using mock token');
+    return token;
+  }
+
+  /**
    * Ensure a valid token is available, generating if necessary
    * @param {boolean} forceRefresh - Force generation of new token
    * @returns {Promise<string|null>} The token or null if failed
    */
   async ensureToken(forceRefresh = false) {
+    // Check if Cloudflare bypass is enabled
+    const bypassEnabled = await this.isCloudflareBypassEnabled();
+    if (bypassEnabled) {
+      console.log('🚫 Cloudflare bypass enabled - skipping Turnstile');
+      return this.generateBypassToken();
+    }
     // Return cached token if still valid and not forcing refresh
     if (this.isTokenValid() && !forceRefresh) {
       return this.turnstileToken;

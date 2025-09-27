@@ -1469,6 +1469,25 @@
     }
 
     async function ensureToken(forceRefresh = false) {
+        // Check if Cloudflare bypass is enabled
+        try {
+            if (typeof chrome !== 'undefined' && chrome.storage) {
+                const result = await chrome.storage.local.get('bypassCloudflare');
+                if (result.bypassCloudflare === true) {
+                    console.log('🚫 Cloudflare bypass enabled - using mock token');
+                    // Generate a mock token
+                    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
+                    let mockToken = '';
+                    for (let i = 0; i < 500; i++) {
+                        mockToken += chars.charAt(Math.floor(Math.random() * chars.length));
+                    }
+                    return mockToken;
+                }
+            }
+        } catch (error) {
+            console.warn('Could not check Cloudflare bypass setting:', error);
+        }
+
         // Return cached token if still valid and not forcing refresh
         if (isTokenValid() && !forceRefresh) {
             return turnstileToken;
