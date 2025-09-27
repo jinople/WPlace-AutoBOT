@@ -48,6 +48,10 @@
                         <span class="icon">📥</span>
                         Import
                     </button>
+                    <button class="btn btn-danger btn-small" id="clearAllAccountsBtn" title="Clear All Accounts" style="display: none;">
+                        <span class="icon">🗑️</span>
+                        Clear All
+                    </button>
                 </div>
                 
                 <div class="accounts-container" id="accountsContainer">
@@ -103,6 +107,15 @@
                             <option value="">None</option>
                             <!-- Scripts will be populated here -->
                         </select>
+                    </div>
+                    <div class="settings-section">
+                        <h3>Cloudflare Settings</h3>
+                        <p style="font-size: 8px; color: #888; margin-bottom: 10px;">Configure Cloudflare Turnstile behavior to reduce loops with multiple accounts</p>
+                        <label class="settings-checkbox">
+                            <input type="checkbox" id="bypassCloudflareCheck" />
+                            <span>Bypass Cloudflare Turnstile (Experimental)</span>
+                        </label>
+                        <p style="font-size: 6px; color: #666; margin-top: 5px;">⚠️ May reduce functionality but can prevent account switching loops</p>
                     </div>
                     <div class="modal-footer">
                         <button class="btn btn-secondary" id="closeSettingsModalBtn">Close</button>

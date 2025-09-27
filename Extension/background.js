@@ -896,6 +896,35 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         return true;
     }
 
+    if (msg.type === "updateCloudflareBypass") {
+        (async () => {
+            try {
+                console.log("🔧 Updating Cloudflare bypass setting:", msg.enabled);
+                await chrome.storage.local.set({ bypassCloudflare: msg.enabled });
+                
+                // Notify all tabs about the change
+                const tabs = await chrome.tabs.query({ url: "https://wplace.live/*" });
+                for (const tab of tabs) {
+                    try {
+                        await chrome.tabs.sendMessage(tab.id, {
+                            type: 'cloudflareBypassUpdated',
+                            enabled: msg.enabled
+                        });
+                    } catch (e) {
+                        // Tab might not have content script, ignore
+                        console.log(`Tab ${tab.id} not responsive to message`);
+                    }
+                }
+                
+                sendResponse({ status: "ok" });
+            } catch (e) {
+                console.error("❌ updateCloudflareBypass failed", e);
+                sendResponse({ status: "error", error: e.message });
+            }
+        })();
+        return true;
+    }
+
     if (msg.action === 'executeScript') {
         // Get tabId from sender or request
         const tabId = msg.tabId || sender.tab?.id;

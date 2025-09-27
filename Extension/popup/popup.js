@@ -37,9 +37,11 @@ const AVAILABLE_SCRIPTS = [
 
 // DOM elements
 let statusDot, statusText, scriptsList, accountsContainer, accountPlaceholder;
-let addAccountModal, accountNameInput, accountTokenInput;
+let addAccountModal, accountNameInput, accountTokenInput, settingsModal;
 let refreshAccountBtn, addAccountBtn, saveAccountBtn, cancelAccountBtn, closeModalBtn;
-let exportAccountsBtn, importAccountsBtn;
+let exportAccountsBtn, importAccountsBtn, clearAllAccountsBtn;
+let settingsBtn, closeSettingsBtn, closeSettingsModalBtn;
+let startupScriptSelect, bypassCloudflareCheck;
 
 // Global state
 let accounts = [];
@@ -50,6 +52,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     initializeElements();
     await loadScripts();
     await loadAccounts();
+    await loadSettings();
     setupEventListeners();
     checkCurrentTab();
     console.log('🚀 Account Manager initialized');
@@ -69,6 +72,7 @@ function initializeElements() {
     addAccountModal = document.getElementById('addAccountModal');
     accountNameInput = document.getElementById('accountName');
     accountTokenInput = document.getElementById('accountToken');
+    settingsModal = document.getElementById('settingsModal');
 
     // Button elements
     refreshAccountBtn = document.getElementById('refreshAccountBtn');
@@ -78,6 +82,14 @@ function initializeElements() {
     closeModalBtn = document.getElementById('closeModalBtn');
     exportAccountsBtn = document.getElementById('exportAccountsBtn');
     importAccountsBtn = document.getElementById('importAccountsBtn');
+    clearAllAccountsBtn = document.getElementById('clearAllAccountsBtn');
+    
+    // Settings elements
+    settingsBtn = document.getElementById('settingsBtn');
+    closeSettingsBtn = document.getElementById('closeSettingsBtn');
+    closeSettingsModalBtn = document.getElementById('closeSettingsModalBtn');
+    startupScriptSelect = document.getElementById('startupScriptSelect');
+    bypassCloudflareCheck = document.getElementById('bypassCloudflareCheck');
 }
 
 async function loadScripts() {
@@ -176,6 +188,28 @@ function setupEventListeners() {
             'success'
         );
     });
+
+    // Clear All Accounts button
+    if (clearAllAccountsBtn) {
+        clearAllAccountsBtn.addEventListener('click', handleClearAllAccounts);
+    }
+
+    // Cloudflare bypass checkbox
+    if (bypassCloudflareCheck) {
+        bypassCloudflareCheck.addEventListener('change', async (e) => {
+            const enabled = e.target.checked;
+            await chrome.storage.local.set({ bypassCloudflare: enabled });
+            showNotification(
+                enabled ? 'Cloudflare bypass enabled' : 'Cloudflare bypass disabled',
+                'info'
+            );
+            // Notify background script of the change
+            chrome.runtime.sendMessage({
+                type: 'updateCloudflareBypass',
+                enabled: enabled
+            });
+        });
+    }
 }
 
 async function loadAccounts() {
@@ -219,6 +253,11 @@ async function loadAccounts() {
 }
 
 function renderAccounts() {
+    // Show/hide Clear All button based on account count
+    if (clearAllAccountsBtn) {
+        clearAllAccountsBtn.style.display = accounts.length > 0 ? 'inline-flex' : 'none';
+    }
+
     if (accounts.length === 0) {
         accountPlaceholder.style.display = 'flex';
         accountsContainer.innerHTML = '';
@@ -347,7 +386,7 @@ async function deleteAccount(index) {
         // Send delete message to background
         const response = await chrome.runtime.sendMessage({
             type: 'deleteAccount',
-            index: account.index
+            index: index
         });
 
         if (response?.status === 'ok') {
@@ -637,6 +676,61 @@ function showNotification(message, type = 'info') {
         setTimeout(() => {
             checkCurrentTab();
         }, 3000);
+    }
+}
+
+async function handleClearAllAccounts() {
+    try {
+        if (accounts.length === 0) {
+            showNotification('No accounts to clear', 'info');
+            return;
+        }
+
+        const confirmed = confirm(
+            `Delete all ${accounts.length} saved accounts?\n\nThis action cannot be undone and will clear all account data.`
+        );
+
+        if (!confirmed) return;
+
+        setLoading(true);
+        showNotification('Clearing all accounts...', 'info');
+
+        // Clear from storage
+        await chrome.storage.local.set({ 
+            infoAccounts: [],
+            accounts: []
+        });
+
+        // Clear local array
+        accounts = [];
+        currentAccountIndex = -1;
+
+        renderAccounts();
+        showNotification('All accounts cleared successfully', 'success');
+
+        console.log('🗑️ All accounts cleared');
+
+    } catch (error) {
+        console.error('❌ Error clearing accounts:', error);
+        showNotification('Failed to clear accounts', 'error');
+    } finally {
+        setLoading(false);
+    }
+}
+
+async function loadSettings() {
+    try {
+        const settings = await chrome.storage.local.get([
+            'bypassCloudflare'
+        ]);
+
+        if (bypassCloudflareCheck) {
+            bypassCloudflareCheck.checked = settings.bypassCloudflare || false;
+        }
+
+        console.log('⚙️ Settings loaded:', settings);
+    } catch (error) {
+        console.error('❌ Error loading settings:', error);
     }
 }
 
