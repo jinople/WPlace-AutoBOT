@@ -99,7 +99,8 @@
           // Check if current pixel already has the target color (simplified color matching)
           // For random farming, we just check if pixel exists and is not transparent
           const alpha = currentPixel[3] || 255;
-          if (alpha > 100) { // Pixel is not transparent, skip to avoid cloudflare spam
+          const transparencyThreshold = window.CONFIG?.TRANSPARENCY_THRESHOLD || 100;
+          if (alpha > transparencyThreshold) { // Pixel is not transparent, skip to avoid cloudflare spam
             console.log(`🎯 Pixel at (${CONFIG.START_X + x}, ${CONFIG.START_Y + y}) already painted, skipping to avoid Cloudflare`);
             return { skipped: true, reason: 'already_painted' };
           }
