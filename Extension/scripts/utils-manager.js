@@ -586,6 +586,15 @@ class WPlaceUtilsManager {
 
     try {
       const migrated = { ...saved };
+      
+      // Ensure lastPaintedPosition exists for backward compatibility
+      if (!migrated.state) {
+        migrated.state = {};
+      }
+      if (!migrated.state.lastPaintedPosition) {
+        migrated.state.lastPaintedPosition = { x: 0, y: 0 };
+      }
+      
       const width = migrated.imageData?.width;
       const height = migrated.imageData?.height;
       if (migrated.paintedMap && width && height) {
@@ -609,6 +618,15 @@ class WPlaceUtilsManager {
     if (!isV2 && !isV1) return saved;
     try {
       const migrated = { ...saved };
+      
+      // Ensure lastPaintedPosition exists for backward compatibility
+      if (!migrated.state) {
+        migrated.state = {};
+      }
+      if (!migrated.state.lastPaintedPosition) {
+        migrated.state.lastPaintedPosition = { x: 0, y: 0 };
+      }
+      
       if (isV1) {
         const width = migrated.imageData?.width;
         const height = migrated.imageData?.height;
@@ -630,6 +648,11 @@ class WPlaceUtilsManager {
     try {
       const migrated = { ...data };
       migrated.version = '2.2';
+
+      // Ensure lastPaintedPosition exists for backward compatibility
+      if (!migrated.state.lastPaintedPosition) {
+        migrated.state.lastPaintedPosition = { x: 0, y: 0 };
+      }
 
       if (!migrated.state.coordinateMode) {
         migrated.state.coordinateMode = window.CONFIG.COORDINATE_MODE;
@@ -680,6 +703,7 @@ class WPlaceUtilsManager {
         totalPixels: window.state.totalPixels,
         paintedPixels: window.state.paintedPixels,
         lastPosition: window.state.lastPosition,
+        lastPaintedPosition: window.state.lastPaintedPosition,
         startPosition: window.state.startPosition,
         region: window.state.region,
         imageLoaded: window.state.imageLoaded,
@@ -775,6 +799,11 @@ class WPlaceUtilsManager {
   restoreProgress(savedData) {
     try {
       Object.assign(window.state, savedData.state);
+
+      // Ensure lastPaintedPosition is properly initialized
+      if (!window.state.lastPaintedPosition) {
+        window.state.lastPaintedPosition = { x: 0, y: 0 };
+      }
 
       // Restore coordinate generation settings
       if (savedData.state.coordinateMode) {
