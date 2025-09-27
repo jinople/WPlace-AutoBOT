@@ -8702,6 +8702,10 @@ function getText(key, params) {
           state.lastPosition = { x, y };
           // Show paused coordinates in UI with proper translation template
           // Use last painted position if available, otherwise use current position
+          // Ensure we have valid lastPaintedPosition
+          if (!state.lastPaintedPosition) {
+            state.lastPaintedPosition = { x: 0, y: 0 };
+          }
           const pausedX = state.lastPaintedPosition.x || x;
           const pausedY = state.lastPaintedPosition.y || y;
           updateUI('paintingPaused', 'warning', { x: pausedX, y: pausedY });
