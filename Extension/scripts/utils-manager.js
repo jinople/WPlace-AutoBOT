@@ -803,7 +803,7 @@ class WPlaceUtilsManager {
         window.state.imageData = {
           width: savedData.imageData.width,
           height: savedData.imageData.height,
-          pixels: savedData.imageData.pixels, // Keep as Array - will convert in ImageData constructor
+          pixels: new Uint8ClampedArray(savedData.imageData.pixels), // Convert back to Uint8ClampedArray
           totalPixels: savedData.imageData.totalPixels,
         };
 

@@ -211,7 +211,7 @@
   padding: 0;
   z-index: 9998;
   animation: slide-in 0.4s ease-out;
-  overflow: hidden;
+  overflow-y: auto;
   transition: all 0.3s ease;
   user-select: none;
 
@@ -239,7 +239,7 @@
 #wplace-image-bot-container.wplace-minimized {
   width: 260px;
   height: auto;
-  overflow: hidden;
+  overflow-y: auto;
 }
 
 /* Stats container sits to the right of main (340 + 30 = 370) */
