@@ -19,6 +19,7 @@
   const state = {
     running: false,
     paintedCount: 0,
+    skippedCount: 0,
     charges: { count: 0, max: 80, cooldownMs: 30000 },
     userInfo: null,
     lastPixel: null,
@@ -83,6 +84,33 @@
 
   const paintPixel = async (x, y) => {
     const randomColor = Math.floor(Math.random() * 31) + 1;
+    
+    // Check current pixel color to avoid unnecessary painting
+    try {
+      if (window.globalOverlayManager) {
+        const tileX = Math.floor((CONFIG.START_X + x) / 1000);
+        const tileY = Math.floor((CONFIG.START_Y + y) / 1000);
+        const pixelX = (CONFIG.START_X + x) % 1000;
+        const pixelY = (CONFIG.START_Y + y) % 1000;
+        
+        const currentPixel = await window.globalOverlayManager.getTilePixelColor(tileX, tileY, pixelX, pixelY);
+        
+        if (currentPixel && currentPixel.length >= 3) {
+          // Check if current pixel already has the target color (simplified color matching)
+          // For random farming, we just check if pixel exists and is not transparent
+          const alpha = currentPixel[3] || 255;
+          const transparencyThreshold = window.CONFIG?.TRANSPARENCY_THRESHOLD || 100;
+          if (alpha > transparencyThreshold) { // Pixel is not transparent, skip to avoid cloudflare spam
+            console.log(`🎯 Pixel at (${CONFIG.START_X + x}, ${CONFIG.START_Y + y}) already painted, skipping to avoid Cloudflare`);
+            return { skipped: true, reason: 'already_painted' };
+          }
+        }
+      }
+    } catch (e) {
+      // If color checking fails, continue with painting
+      console.log('⚠️ Color check failed, proceeding with paint:', e.message);
+    }
+
     const url = `https://backend.wplace.live/s0/pixel/${CONFIG.START_X}/${CONFIG.START_Y}`;
     const payload = JSON.stringify({
       coords: [x, y],
@@ -258,7 +286,20 @@
         continue;
       }
 
-      if (paintResult?.painted === 1) {
+      if (paintResult?.skipped) {
+        // Pixel was skipped to avoid unnecessary Cloudflare challenges
+        state.skippedCount++;
+        updateUI(
+          state.language === 'pt' 
+            ? '⏭️ Pixel já pintado, pulando...' 
+            : '⏭️ Pixel already painted, skipping...',
+          'status'
+        );
+        // Shorter delay for skipped pixels to be more efficient
+        await sleep(Math.min(CONFIG.DELAY, 500));
+        updateStats();
+        continue;
+      } else if (paintResult?.painted === 1) {
         state.paintedCount++;
         state.lastPixel = {
           x: CONFIG.START_X + randomPos.x,
@@ -606,18 +647,21 @@
         pt: {
           user: 'Usuário',
           pixels: 'Pixels',
+          skipped: 'Pulados',
           charges: 'Cargas',
           level: 'Level',
         },
         en: {
           user: 'User',
           pixels: 'Pixels',
+          skipped: 'Skipped',
           charges: 'Charges',
           level: 'Level',
         },
       }[state.language] || {
         user: 'User',
         pixels: 'Pixels',
+        skipped: 'Skipped',
         charges: 'Charges',
         level: 'Level',
       };
@@ -630,6 +674,10 @@
         <div class="wplace-stat-item">
           <div class="wplace-stat-label"><i class="fas fa-paint-brush"></i> ${t.pixels}</div>
           <div>${state.paintedCount}</div>
+        </div>
+        <div class="wplace-stat-item">
+          <div class="wplace-stat-label"><i class="fas fa-forward"></i> ${t.skipped}</div>
+          <div>${state.skippedCount}</div>
         </div>
         <div class="wplace-stat-item">
           <div class="wplace-stat-label"><i class="fas fa-bolt"></i> ${t.charges}</div>
